@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>CG125 Golden Edition — Open Road</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#8fc7e8;font-family:system-ui,Arial;color:#fff;touch-action:none}
+#game{display:block;width:100%;height:100%}#hud{position:fixed;inset:12px 12px auto;display:flex;justify-content:space-between;pointer-events:none;text-shadow:0 2px 5px #000}
+.panel{background:#101820b8;border:1px solid #ffffff45;border-radius:12px;padding:9px 12px;backdrop-filter:blur(5px);font-weight:700}
+#speed{font-size:25px}#hint{position:fixed;left:50%;top:12px;transform:translateX(-50%);font-size:12px;white-space:nowrap;background:#101820aa;padding:7px 10px;border-radius:10px}
+#controls{position:fixed;inset:auto 14px 18px;display:flex;justify-content:space-between;align-items:end;pointer-events:none}
+.group{display:flex;gap:10px;pointer-events:auto}.ctrl{width:66px;height:66px;border-radius:50%;border:2px solid #ffffff99;background:#111c;color:white;font-size:23px;font-weight:800;box-shadow:0 4px 14px #0006;touch-action:none}
+.ctrl:active{background:#d6a928;color:#111}.pedal{width:76px;height:76px;font-size:14px}
+#start{position:fixed;inset:0;background:linear-gradient(#06131c99,#06131cdd);display:grid;place-items:center;text-align:center;padding:24px}
+#start .card{max-width:420px;background:#101820e8;border:1px solid #d6a92888;border-radius:20px;padding:25px;box-shadow:0 15px 50px #0008}
+#start h1{margin:0 0 8px;color:#f3c84b}#start p{line-height:1.5;color:#dce5eb}#start button{border:0;border-radius:12px;background:#e4b52f;color:#161616;font-weight:900;font-size:17px;padding:13px 28px}
+.small{font-size:12px;color:#bdc9d1}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+ <div class="panel">🏍️ CG125 <span style="color:#f4c744">GOLD</span><div class="small">OPEN ROAD</div></div>
+ <div class="panel" id="speed">0 <span style="font-size:12px">KM/H</span><div class="small" id="gear">GEAR N</div></div>
+</div>
+<div id="hint">WASD / Arrow keys · Touch controls below</div>
+<div id="controls">
+ <div class="group">
+  <button class="ctrl" data-key="ArrowLeft">◀</button>
+  <button class="ctrl" data-key="ArrowRight">▶</button>
+ </div>
+ <div class="group">
+  <button class="ctrl pedal" data-key="ArrowDown">BRAKE</button>
+  <button class="ctrl pedal" data-key="ArrowUp">GAS</button>
+ </div>
+</div>
+<div id="start"><div class="card">
+<h1>CG125 GOLDEN EDITION</h1>
+<p>Welcome to your open-road ride. Explore the countryside, cruise the highway and test your acceleration.</p>
+<p class="small">Prototype 3D build · Best experienced in landscape mode</p>
+<button id="play">START RIDING</button>
+</div></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+const canvas=document.querySelector('#game');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x8fc7e8);scene.fog=new THREE.Fog(0x9bc9dc,90,430);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,700);
+scene.add(new THREE.HemisphereLight(0xeaf7ff,0x66734a,2.0));
+const sun=new THREE.DirectionalLight(0xffedc5,2.5);sun.position.set(-35,65,35);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-90;sun.shadow.camera.right=90;sun.shadow.camera.top=90;sun.shadow.camera.bottom=-90;scene.add(sun);
+const mat=(c,rough=.7,metal=0)=>new THREE.MeshStandardMaterial({color:c,roughness:rough,metalness:metal});
+const asphalt=mat(0x30363a),lineMat=mat(0xf4e8c2),grass=mat(0x66894b),gold=mat(0xd9a51e,.28,.72),black=mat(0x17191b,.45),chrome=mat(0xb9c6cc,.2,.85),red=mat(0x9d1517,.3,.35);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(1000,1000),grass);ground.rotation.x=-Math.PI/2;ground.position.y=-.12;ground.receiveShadow=true;scene.add(ground);
+const road=new THREE.Mesh(new THREE.PlaneGeometry(13,1000),asphalt);road.rotation.x=-Math.PI/2;road.position.y=-.08;road.receiveShadow=true;scene.add(road);
+for(let z=-490;z<500;z+=12){let dash=new THREE.Mesh(new THREE.PlaneGeometry(.16,5),lineMat);dash.rotation.x=-Math.PI/2;dash.position.set(0,-.055,z);scene.add(dash)}
+for(let x of [-6.35,6.35]){let edge=new THREE.Mesh(new THREE.PlaneGeometry(.12,1000),lineMat);edge.rotation.x=-Math.PI/2;edge.position.set(x,-.05,0);scene.add(edge)}
+// Distant hills
+for(let i=0;i<24;i++){const h=18+Math.random()*35,r=35+Math.random()*35;const hill=new THREE.Mesh(new THREE.ConeGeometry(r,h,7),mat(i%2?0x718c58:0x82985f));hill.position.set((Math.random()>.5?1:-1)*(45+Math.random()*130),h/2-1,-260+Math.random()*520);hill.rotation.y=Math.random()*3;scene.add(hill)}
+// roadside trees and simple village houses
+function tree(x,z){const g=new THREE.Group();let trunk=new THREE.Mesh(new THREE.CylinderGeometry(.22,.35,3,7),mat(0x69452b));trunk.position.y=1.5;g.add(trunk);let crown=new THREE.Mesh(new THREE.SphereGeometry(1.7,8,7),mat(0x315d32));crown.position.y=3.6;g.add(crown);g.position.set(x,0,z);g.traverse(o=>{if(o.isMesh)o.castShadow=true});scene.add(g)}
+function house(x,z){const g=new THREE.Group();let b=new THREE.Mesh(new THREE.BoxGeometry(5,3.2,4),mat(0xc7ad83));b.position.y=1.6;g.add(b);let roof=new THREE.Mesh(new THREE.ConeGeometry(3.8,1.5,4),mat(0x985f43));roof.position.y=3.9;roof.rotation.y=Math.PI/4;g.add(roof);let door=new THREE.Mesh(new THREE.BoxGeometry(.9,1.8,.08),mat(0x493326));door.position.set(0,.9,2.05);g.add(door);g.position.set(x,0,z);g.traverse(o=>{if(o.isMesh)o.castShadow=true});scene.add(g)}
+for(let z=-470;z<500;z+=22){tree(-10-Math.random()*5,z+Math.random()*8);tree(10+Math.random()*5,z+Math.random()*8);if(Math.random()>.63)house((Math.random()>.5?1:-1)*(19+Math.random()*13),z+8)}
+// bike group, facing toward negative Z
+const bike=new THREE.Group();scene.add(bike);
+function cyl(parent,r1,r2,len,material,pos,rot=[Math.PI/2,0,0],segments=16){let m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,len,segments),material);m.position.set(...pos);m.rotation.set(...rot);m.castShadow=true;parent.add(m);return m}
+function bar(parent,a,b,r,material){let A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),d=B.clone().sub(A);let m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),10),material);m.position.copy(A.add(B).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());m.castShadow=true;parent.add(m);return m}
+function wheel(z){let w=new THREE.Group();w.position.set(0,.65,z);bike.add(w);cyl(w,.63,.63,.22,black,[0,0,0],[Math.PI/2,0,0],32);cyl(w,.43,.43,.235,chrome,[0,0,0],[Math.PI/2,0,0],24);cyl(w,.09,.09,.26,black,[0,0,0],[Math.PI/2,0,0],16);for(let i=0;i<12;i++){let a=i*Math.PI/6;bar(w,[Math.cos(a)*.1,Math.sin(a)*.1,0],[Math.cos(a)*.41,Math.sin(a)*.41,0],.012,chrome)}return w}
+const rear=wheel(1.05),front=wheel(-1.12);
+bar(bike,[0,.85,1.05],[0,1.15,.1],.055,chrome);bar(bike,[0,1.15,.1],[0,1.18,-.65],.055,chrome);
+bar(bike,[0,.8,1.05],[0,1.3,-.7],.045,chrome);
+let engine=new THREE.Mesh(new THREE.BoxGeometry(.75,.62,.58),chrome);engine.position.set(0,1.0,.25);engine.castShadow=true;bike.add(engine);
+let tank=new THREE.Mesh(new THREE.SphereGeometry(1,20,14),gold);tank.scale.set(.52,.42,.88);tank.position.set(0,1.55,-.28);tank.castShadow=true;bike.add(tank);
+let tankStripe=new THREE.Mesh(new THREE.BoxGeometry(.025,.03,1.1),mat(0xffe7a0,.25,.5));tankStripe.position.set(0,1.83,-.28);bike.add(tankStripe);
+let seat=new THREE.Mesh(new THREE.BoxGeometry(.58,.17,1.05),black);seat.position.set(0,1.55,.78);seat.castShadow=true;bike.add(seat);
+let tail=new THREE.Mesh(new THREE.BoxGeometry(.48,.22,.35),red);tail.position.set(0,1.48,1.38);bike.add(tail);
+let lamp=new THREE.Mesh(new THREE.SphereGeometry(.22,14,10),mat(0xfff1bd,.15,.2));lamp.position.set(0,1.5,-1.12);bike.add(lamp);
+bar(bike,[-.36,1.45,-.9],[-.42,.75,-1.12],.045,chrome);bar(bike,[.36,1.45,-.9],[.42,.75,-1.12],.045,chrome);
+bar(bike,[-.65,1.72,-1.05],[.65,1.72,-1.05],.035,black);
+for(let s of [-1,1]){bar(bike,[s*.48,.75,.85],[s*.48,.75,-.35],.045,chrome);cyl(bike,.07,.07,.75,black,[s*.47,.75,.25],[0,0,Math.PI/2])}
+let rider=new THREE.Group();bike.add(rider);let body=new THREE.Mesh(new THREE.SphereGeometry(.34,12,10),mat(0x202b36));body.scale.set(.8,1.35,.65);body.position.set(0,2.0,.35);rider.add(body);let head=new THREE.Mesh(new THREE.SphereGeometry(.23,14,12),mat(0x171a20));head.position.set(0,2.55,.05);rider.add(head);
+bike.position.set(0,0,0);
+// roadside parked/approaching traffic
+const traffic=[];
+function car(z,lane){let g=new THREE.Group();let body=new THREE.Mesh(new THREE.BoxGeometry(1.8,.8,3.6),mat([0xeeeeea,0x9d2828,0x284b70,0xd0b52c][Math.floor(Math.random()*4)]));body.position.y=.65;g.add(body);let cabin=new THREE.Mesh(new THREE.BoxGeometry(1.45,.7,1.7),mat(0x344b59,.25));cabin.position.set(0,1.35,-.1);g.add(cabin);for(let x of [-.95,.95])for(let zz of [-1.15,1.15])cyl(g,.34,.34,.18,black,[x,.38,zz],[0,0,Math.PI/2],16);g.position.set(lane,0,z);scene.add(g);traffic.push(g)}
+for(let i=0;i<10;i++)car(-70-i*48,(i%2?2.5:-2.5));
+const keys={};let speed=0,steer=0,started=false,worldZ=0;
+addEventListener('keydown',e=>{keys[e.key]=true;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault()});
+addEventListener('keyup',e=>keys[e.key]=false);
+document.querySelectorAll('.ctrl').forEach(b=>{let k=b.dataset.key;b.addEventListener('pointerdown',e=>{e.preventDefault();keys[k]=true});['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,()=>keys[k]=false))});
+document.querySelector('#play').onclick=()=>{started=true;document.querySelector('#start').style.display='none';};
+const clock=new THREE.Clock();
+function animate(){requestAnimationFrame(animate);let dt=Math.min(clock.getDelta(),.04);
+if(started){let gas=keys.ArrowUp||keys.w||keys.W,brake=keys.ArrowDown||keys.s||keys.S,left=keys.ArrowLeft||keys.a||keys.A,right=keys.ArrowRight||keys.d||keys.D;
+speed+=gas?22*dt: -5*dt;if(brake)speed-=38*dt;speed=THREE.MathUtils.clamp(speed,0,145);
+steer=THREE.MathUtils.damp(steer,(left?1:0)-(right?1:0),5,dt);
+bike.position.x=THREE.MathUtils.clamp(bike.position.x+steer*speed*.012, -4.8,4.8);
+bike.rotation.z=THREE.MathUtils.damp(bike.rotation.z,-steer*.24,5,dt);
+bike.rotation.y=THREE.MathUtils.damp(bike.rotation.y,steer*.09,4,dt);
+worldZ-=speed*dt*.22;
+for(let t of traffic){t.position.z+=speed*dt*.22;if(t.position.z>12)t.position.z-=500;}
+for(let o of scene.children){if(o.position && o.userData.roadside){o.position.z+=speed*dt*.22;if(o.position.z>30)o.position.z-=500}}
+camera.position.set(bike.position.x*.45,4.2,8.7);camera.lookAt(bike.position.x*.35,1.0,-9);
+rear.rotation.x-=speed*dt*.04;front.rotation.x-=speed*dt*.04;
+document.querySelector('#speed').innerHTML=Math.round(speed)+' <span style="font-size:12px">KM/H</span><div class="small" id="gear">GEAR '+(speed<2?'N':speed<25?'1':speed<48?'2':speed<75?'3':speed<105?'4':'5')+'</div>';
+}else{camera.position.set(0,4.2,8.7);camera.lookAt(0,1,-9)}
+renderer.render(scene,camera)}
+animate();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body></html>
